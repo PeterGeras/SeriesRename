@@ -53,7 +53,7 @@ def get_items_with_max_count(dct):
 def count_filetypes(filenames: list):
     filetypes = Counter()
     for filename in filenames:  # all files and folders
-        if os.path.isdir(os.path.join(os.path.abspath("."), filename)):  # folders
+        if os.path.isdir(os.path.join(os.path.abspath(".."), filename)):  # folders
             filetypes[FILETYPE_FOLDER] += 1
         else:
             filetypes[Path(filename).suffix] += 1
