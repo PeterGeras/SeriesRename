@@ -92,11 +92,9 @@ def rename_episodes_and_subs(season_path: str, series_name: str, season_index: i
     return changes
 
 
-def execute_changes(series_path, changes):
+def execute_changes(changes):
     
     for old_path, new_path in changes:
-        if old_path == new_path:
-            continue
-        rel_old = os.path.relpath(old_path, series_path)
-        rel_new = os.path.relpath(new_path, series_path)
-        os.rename(old_path, new_path)
+        if old_path != new_path:
+            os.rename(old_path, new_path)
+        

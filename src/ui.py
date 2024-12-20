@@ -22,7 +22,7 @@ def select_folder():
         # Build a tree structure from the changes
         tree = build_tree(series_path, changes)
 
-        display_suggestions(series_path, tree, changes, root)
+        display_suggestions(tree, changes, root)
 
         # Start the event loop so that the suggestions window is shown
         root.mainloop()
@@ -101,7 +101,7 @@ def build_tree(series_path, changes):
 
     return root
 
-def display_suggestions(series_path, tree, changes, parent):
+def display_suggestions(tree, changes, parent):
     suggestions_win = tk.Toplevel(parent)
     suggestions_win.title("Suggested Renames")
 
@@ -118,7 +118,7 @@ def display_suggestions(series_path, tree, changes, parent):
     button_frame.pack(fill="x", pady=5)
 
     confirm_button = tk.Button(button_frame, text="Confirm",
-                               command=lambda: do_renames(series_path, changes, suggestions_win, parent))
+                               command=lambda: do_renames(changes, suggestions_win, parent))
     confirm_button.pack(side="right", padx=5)
 
     cancel_button = tk.Button(button_frame, text="Cancel", 
@@ -165,9 +165,9 @@ def insert_tree(text_widget, node, prefix="", is_last=True):
             insert_tree(text_widget, child, prefix=child_prefix, is_last=(i == len(children_keys) - 1))
 
 
-def do_renames(series_path, changes, window, parent):
+def do_renames(changes, window, parent):
     try:
-        execute_changes(series_path, changes)
+        execute_changes(changes)
         messagebox.showinfo("Success", "Renaming completed successfully.")
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred during renaming:\n{e}")
