@@ -25,8 +25,11 @@ def rename_series(series_path: str, series_name: str):
         new_season_name = f"{series_name}_S{season_index:02d}"
         new_season_path = os.path.join(series_path, new_season_name)
 
-        changes.append((season_path, new_season_path))
+        # First gather changes for files
         changes.extend(rename_episodes_and_subs(season_path, series_name, season_index))
+        # Then add the rename for the folder itself
+        if season_path != new_season_path:
+            changes.append((season_path, new_season_path))
 
     return changes
 
@@ -43,11 +46,10 @@ def rename_episodes_and_subs(season_path: str, series_name: str, season_index: i
 
     episode_files = []
     subtitle_files = []
-
     allowed_video_extensions = ['.mp4', '.mkv', '.avi']
     allowed_subtitle_extensions = ['.srt', '.sub']
 
-    # Identify episode files and subtitles in the season folder
+    # Identify episode and subtitle files
     for item in os.listdir(season_path):
         item_path = os.path.join(season_path, item)
         if os.path.isfile(item_path):
@@ -59,21 +61,20 @@ def rename_episodes_and_subs(season_path: str, series_name: str, season_index: i
             else:
                 raise UnexpectedFileExtensionError(item_path, ext)
 
-    # Sort and rename episode files
+    # Rename episode files and matching subtitles
     for episode_index, episode_path in enumerate(sorted(episode_files), start=1):
         episode_extension = Path(episode_path).suffix
         new_episode_name = f"{series_name}_S{season_index:02d}_E{episode_index:02d}{episode_extension}"
         new_episode_path = os.path.join(season_path, new_episode_name)
-        changes.append((episode_path, new_episode_path))
+        if episode_path != new_episode_path:
+            changes.append((episode_path, new_episode_path))
 
-        # Find matching subtitle files (if any) in the season folder
         for subtitle_path in subtitle_files:
             subtitle_extension = Path(subtitle_path).suffix
             new_subtitle_name = f"{series_name}_S{season_index:02d}_E{episode_index:02d}{subtitle_extension}"
             new_subtitle_path = os.path.join(season_path, new_subtitle_name)
-
-            # Add renaming suggestion for this subtitle file
-            changes.append((subtitle_path, new_subtitle_path))
+            if subtitle_path != new_subtitle_path:
+                changes.append((subtitle_path, new_subtitle_path))
             subtitle_files.remove(subtitle_path)
             break
 
@@ -85,18 +86,18 @@ def rename_episodes_and_subs(season_path: str, series_name: str, season_index: i
             subtitle_extension = subtitle_path.suffix
             new_subtitle_name = f"{series_name}_S{season_index:02d}_E{episode_index:02d}{subtitle_extension}"
             new_subtitle_path = subs_folder / new_subtitle_name
-
-            # Add renaming suggestion for this subtitle file
-            changes.append((str(subtitle_path), str(new_subtitle_path)))
+            if subtitle_path != new_subtitle_path:
+                changes.append((subtitle_path, new_subtitle_path))
 
     return changes
 
 
 def execute_changes(series_path, changes):
+    
     for old_path, new_path in changes:
+        if old_path == new_path:
+            continue
         rel_old = os.path.relpath(old_path, series_path)
         rel_new = os.path.relpath(new_path, series_path)
         print(f"Renaming: {rel_old} -> {rel_new}")
         os.rename(old_path, new_path)
-
-
