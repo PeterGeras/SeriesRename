@@ -99,5 +99,4 @@ def execute_changes(series_path, changes):
             continue
         rel_old = os.path.relpath(old_path, series_path)
         rel_new = os.path.relpath(new_path, series_path)
-        print(f"Renaming: {rel_old} -> {rel_new}")
         os.rename(old_path, new_path)

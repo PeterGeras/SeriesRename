@@ -1,8 +1,7 @@
+import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from logic import rename_series, execute_changes
-import os
-
 
 def select_folder():
     root = tk.Tk()
@@ -38,7 +37,7 @@ def build_tree(series_path, changes):
     {
         'old_name': str,
         'new_name': str,
-        'children': dict() of name->node,
+        'children': dict(),
         'is_dir': bool
     }
     """
@@ -113,45 +112,69 @@ def display_suggestions(series_path, tree, changes, parent):
     text_widget.tag_configure("new", foreground="green")
 
     # Recursively insert the tree into the text widget
-    insert_tree(text_widget, tree, indent_level=0)
+    insert_tree(text_widget, tree, prefix="", is_last=True)
 
     button_frame = tk.Frame(suggestions_win)
     button_frame.pack(fill="x", pady=5)
 
-    confirm_button = tk.Button(button_frame, text="Confirm", command=lambda: do_renames(series_path, changes, suggestions_win))
-    confirm_button.pack(side="left", padx=5)
+    confirm_button = tk.Button(button_frame, text="Confirm",
+                               command=lambda: do_renames(series_path, changes, suggestions_win, parent))
+    confirm_button.pack(side="right", padx=5)
 
-    cancel_button = tk.Button(button_frame, text="Cancel", command=suggestions_win.destroy)
-    cancel_button.pack(side="right", padx=5)
+    cancel_button = tk.Button(button_frame, text="Cancel", 
+                              command=lambda: close_all(parent, suggestions_win))
+    cancel_button.pack(side="left", padx=5)
 
-def insert_tree(text_widget, node, indent_level):
-    indent = "  " * indent_level
 
-    # Print this node's name
-    old_name = node['old_name']
-    new_name = node['new_name']
+def insert_tree(text_widget, node, prefix="", is_last=True):
+    """
+    Recursively insert tree structure into the text widget with a tree-like visualization.
+    prefix: The string prefix to show before the node (with lines).
+    is_last: If this node is the last child in its directory, affects drawing lines.
+    """
 
-    # If old_name != new_name, show old in red strike-through and new in green
-    # Otherwise just show the name
-    if old_name != new_name:
-        # old
-        text_widget.insert("end", indent)
+    # Choose the branch character based on whether it's the last child
+    branch = "└── " if is_last else "├── "
+
+    # If this is the root node, don't display the branch (just the name)
+    display_name = node['old_name'] if node['old_name'] == node['new_name'] else f"{node['old_name']} -> {node['new_name']}"
+    if node['old_name'] == node['new_name']:
+        # No rename
+        if prefix:
+            text_widget.insert("end", prefix + branch + display_name + "\n")
+        else:
+            text_widget.insert("end", display_name + "\n")
+    else:
+        # Renamed, show old in red and new in green
+        if prefix:
+            text_widget.insert("end", prefix + branch)
+        old_name = node['old_name']
+        new_name = node['new_name']
         text_widget.insert("end", old_name, "old")
         text_widget.insert("end", " -> ")
         text_widget.insert("end", new_name + "\n", "new")
-    else:
-        text_widget.insert("end", indent + old_name + "\n")
 
-    # If directory, print children with one more indentation level
-    if node['is_dir']:
-        for child in sorted(node['children'].keys()):
-            insert_tree(text_widget, node['children'][child], indent_level + 1)
+    # If directory, show children
+    if node['is_dir'] and node['children']:
+        # For each child, determine the new prefix and whether it's the last child
+        children_keys = sorted(node['children'].keys())
+        for i, child_key in enumerate(children_keys):
+            child = node['children'][child_key]
+            # If not last, we add a vertical line to show continuation
+            child_prefix = prefix + ("    " if is_last else "│   ")
+            insert_tree(text_widget, child, prefix=child_prefix, is_last=(i == len(children_keys) - 1))
 
-def do_renames(series_path, changes, window):
+
+def do_renames(series_path, changes, window, parent):
     try:
         execute_changes(series_path, changes)
         messagebox.showinfo("Success", "Renaming completed successfully.")
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred during renaming:\n{e}")
     finally:
-        window.destroy()
+        close_all(parent, window)
+
+
+def close_all(parent, window):
+    window.destroy()
+    parent.quit()
