@@ -1,7 +1,8 @@
 import os
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
 from logic import rename_series, execute_changes
+
 
 def select_folder():
     root = tk.Tk()
@@ -101,9 +102,18 @@ def build_tree(series_path, changes):
 
     return root
 
+
 def display_suggestions(tree, changes, parent):
     suggestions_win = tk.Toplevel(parent)
     suggestions_win.title("Suggested Renames")
+    suggestions_win.protocol("WM_DELETE_WINDOW", lambda: close_all(parent, suggestions_win))
+
+    style = ttk.Style(suggestions_win)
+    style.configure("TButton", padding=6, relief="flat", font=("Segoe UI", 10))
+    style.map("TButton", 
+              foreground=[('!disabled', 'black')],
+              background=[('!disabled', '#e1e1e1'), ('active', '#d4d4d4')],
+              relief=[('pressed', 'ridge'), ('!disabled', 'flat')])
 
     text_widget = tk.Text(suggestions_win, wrap="none")
     text_widget.pack(fill="both", expand=True)
@@ -111,19 +121,26 @@ def display_suggestions(tree, changes, parent):
     text_widget.tag_configure("old", foreground="red", overstrike=True)
     text_widget.tag_configure("new", foreground="green")
 
-    # Recursively insert the tree into the text widget
     insert_tree(text_widget, tree, prefix="", is_last=True)
 
-    button_frame = tk.Frame(suggestions_win)
-    button_frame.pack(fill="x", pady=5)
+    button_frame = ttk.Frame(suggestions_win)
+    button_frame.pack(fill="x", pady=5, padx=5)
 
-    confirm_button = tk.Button(button_frame, text="Confirm",
-                               command=lambda: do_renames(changes, suggestions_win, parent))
-    confirm_button.pack(side="right", padx=5)
+    cancel_button = ttk.Button(
+        button_frame,
+        text="Cancel",
+        command=lambda: close_all(parent, suggestions_win),
+        style="TButton"
+    )
+    cancel_button.pack(side="left", padx=(0, 10))
 
-    cancel_button = tk.Button(button_frame, text="Cancel", 
-                              command=lambda: close_all(parent, suggestions_win))
-    cancel_button.pack(side="left", padx=5)
+    confirm_button = ttk.Button(
+        button_frame,
+        text="Confirm",
+        command=lambda: do_renames(changes, suggestions_win, parent),
+        style="TButton"
+    )
+    confirm_button.pack(side="right")
 
 
 def insert_tree(text_widget, node, prefix="", is_last=True):
@@ -137,7 +154,7 @@ def insert_tree(text_widget, node, prefix="", is_last=True):
     branch = "└── " if is_last else "├── "
 
     # If this is the root node, don't display the branch (just the name)
-    display_name = node['old_name'] if node['old_name'] == node['new_name'] else f"{node['old_name']} -> {node['new_name']}"
+    display_name = node['old_name'] if node['old_name'] == node['new_name'] else f"{node['old_name']} {node['new_name']}"
     if node['old_name'] == node['new_name']:
         # No rename
         if prefix:
@@ -151,7 +168,7 @@ def insert_tree(text_widget, node, prefix="", is_last=True):
         old_name = node['old_name']
         new_name = node['new_name']
         text_widget.insert("end", old_name, "old")
-        text_widget.insert("end", " -> ")
+        text_widget.insert("end", " ")
         text_widget.insert("end", new_name + "\n", "new")
 
     # If directory, show children
@@ -161,7 +178,7 @@ def insert_tree(text_widget, node, prefix="", is_last=True):
         for i, child_key in enumerate(children_keys):
             child = node['children'][child_key]
             # If not last, we add a vertical line to show continuation
-            child_prefix = prefix + ("    " if is_last else "│   ")
+            child_prefix = prefix + ("\t" if is_last else "│\t")
             insert_tree(text_widget, child, prefix=child_prefix, is_last=(i == len(children_keys) - 1))
 
 
